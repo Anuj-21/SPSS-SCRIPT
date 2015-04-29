@@ -1,0 +1,82 @@
+var src1
+var src2
+set src1="C:\Users\Desktop\Car-data.csv"
+set src2="C:\Users\Desktop\Car-prediction.csv"
+
+var yloc 
+set yloc= 150
+var n1
+var n2
+
+var analysis
+var apnode
+var knnode
+var field
+set field='Doors'
+
+create stream 'KNN'
+
+set n1=create variablefilenode
+position ^n1 at 150 ^yloc
+set ^n1.full_filename= ^ src1
+set ^n1.read_field_names = true
+set ^n1.custom_storage.^field = "String"
+set ^n1.values.'Price' = ["high" "low" "med" "vhigh"]
+set ^n1.values.'Maintenance' = ["high" "low" "med" "vhigh"]
+set ^n1.values.'Doors' = ["2" "3" "4" "more"]
+set ^n1.values.'Person Capacity' = ["2" "4" "more"]
+set ^n1.values.'Luggage Boot' = ["big" "med" "small"]
+set ^n1.values.'Safety' = ["high" "low" "med"]
+set ^n1.values.'Car Rating' = ["acc" "good" "unacc" "vgood"]
+set ^n1.default_value_mode = Read
+set ^n1.delimit_comma = true
+set ^n1.direction.'Car Rating'="Target"
+
+set n2= create variablefilenode
+position ^n2 at 150 ^yloc+100
+set ^n2.full_filename= ^src2
+set ^n2.read_field_names=true
+set ^n2.delimit_comma=true
+set ^n2.values.'Price' = ["high" "low" "med" "vhigh"]
+set ^n2.values.'Maintenance' = ["high" "low" "med" "vhigh"]
+set ^n2.values.'Doors' = ["2" "3" "4" "more"]
+set ^n2.values.'Person Capacity' = ["2" "4" "more"]
+set ^n2.values.'Luggage Boot' = ["big" "med" "small"]
+set ^n2.values.'Safety' = ["high" "low" "med"]
+set ^n2.default_value_mode = Read
+
+set apnode=create appendnode
+position ^apnode at 250 ^yloc+100
+connect ^n1 to ^apnode
+connect ^n2 to ^apnode
+set ^apnode.match_by=Name
+set ^apnode.include_fields_from=ALL
+
+var typnode
+set typnode = create typenode
+position ^typnode at 350 ^yloc+50
+connect ^apnode to ^typnode
+
+set knnode = create knnnode
+position ^knnode at 450 ^yloc+50
+set knname = "KNN"
+set ^knnode.model_name = ^knname
+set ^knnode.analysis = PredictTarget
+connect ^typnode to ^knnode
+set ^knnode.use_partitioned_data = false
+set ^knnode.use_split_data = false
+set ^knnode.automatic_k_selection = false
+set ^knnode.fixed_k = 5
+set ^knnode.validation_fold_assign_by_field = false
+set ^knnode.number_of_folds = 5
+execute ^knnode
+
+insert model ^knname at 450 ^yloc+150
+connect ^typnode to ^knname:applyknnnode
+
+
+set analysis = create analysisnode 
+position ^analysis at 550 ^yloc+150
+connect ^knname:applyknnnode to analysis
+execute analysis
+
