@@ -1,0 +1,1 @@
+This is a script which iteratively runs on the dataset(s1 here) by taking cluster value incrementally starting from 2 to 5,calculate the SSE(sum of square Error) for each cluster value and finally draw a graph between SSE and no of cluster.
